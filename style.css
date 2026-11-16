@@ -14,3 +14,10 @@ section{padding:44px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,
 footer{border-top:1px solid var(--line);padding:24px 0;color:var(--mute);font-size:14px}
 .legal h2{font-size:22px;margin-top:34px}.legal{max-width:780px}
 @media(max-width:760px){.hero{grid-template-columns:1fr}}
+
+@keyframes qin{from{opacity:0;transform:translateY(18px)}}@keyframes qgrow{from{transform:scale(0)}}
+.hero>div{animation:qin .6s cubic-bezier(.2,.8,.2,1) both}.hero>div+div{animation-delay:.15s}
+.hero-chart .fl{animation:qgrow 1.1s cubic-bezier(.2,.8,.2,1) both}.hero-chart g:nth-of-type(2) .fl{animation-delay:.5s}.hero-chart g:nth-of-type(3) .fl{animation-delay:.7s}.hero-chart g:nth-of-type(4) .fl{animation-delay:.9s}.hero-chart g:nth-of-type(5) .fl{animation-delay:1.1s}
+.anim .rv{opacity:0;transform:translateY(24px);transition:opacity .6s cubic-bezier(.2,.8,.2,1),transform .6s cubic-bezier(.2,.8,.2,1)}.anim .rv.vu{opacity:1;transform:none}
+.c{transition:transform .2s,box-shadow .2s}.grid .c:hover{transform:translateY(-3px);box-shadow:0 10px 24px #1d242114}.btn{transition:transform .15s,filter .2s}.btn:hover{filter:brightness(1.08)}.btn:active{transform:scale(.97)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
