@@ -12,7 +12,7 @@ h1{font-size:clamp(32px,5vw,50px);line-height:1.1;margin:0 0 16px;letter-spacing
 .lead{font-size:20px;color:var(--mute)}.cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
 section{padding:44px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
 .c{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px}.c h3{margin:0 0 6px}
-.dim{border-top:6px solid var(--g)}.dim:nth-child(2n){border-top-color:var(--a)}
+
 .price{font-size:30px;font-weight:700;color:var(--g)}ul.k{padding-left:20px}
 footer{border-top:1px solid var(--line);padding:24px 0;color:var(--mute);font-size:14px}
 .legal h2{font-size:22px;margin-top:34px}.legal{max-width:780px}
