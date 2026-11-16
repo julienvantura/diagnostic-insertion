@@ -240,6 +240,11 @@ const nm=(C.nom||'structure').replace(/[^\w-]+/g,'_');dl('<!doctype html>\n'+d.o
 // ===== Licence : essai gratuit de 25 ouvertures, puis clé signée =====
 const LIC_MAX=25,LIC_CONTACT='julien.allart@developaou.com',LIC_PUB={kty:'EC',crv:'P-256',x:'vvffxrqkQB7yoDYs5vwOGECgW9Fku--FtMnEG9AKreE',y:'GNCfKfVNaDjiYe6ETKSxyW9heFah4YRUXuD1RxoIFGQ'};
 const LK=['dip_o','dip_sys_t'];
+// Serveur de licences : révocation, nombre de postes. Vide = mode hors ligne seul.
+const LIC_SERVER='https://dip-licences.lelins974.workers.dev',LIC_GRACE=30;let LICMSG='';
+async function srv(key){if(!LIC_SERVER)return {status:'ok',local:1};const ac=new AbortController();const t=setTimeout(()=>ac.abort(),7000);
+try{const r=await fetch(LIC_SERVER+'/v1/licence',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key,code:await myId()}),signal:ac.signal});return await r.json()}catch(e){return {status:'net'}}finally{clearTimeout(t)}}
+const lokGet=()=>{try{return +(localStorage.getItem('dip_lok')||0)}catch(e){return 0}},lokSet=()=>{try{localStorage.setItem('dip_lok',Date.now())}catch(e){}};
 function licGet(){let n=0;try{LK.forEach(k=>n=Math.max(n,+(localStorage.getItem(k)||0)))}catch(e){}return n}
 function licSet(n){try{LK.forEach(k=>localStorage.setItem(k,n))}catch(e){}}
 async function licCheck(key){try{const m=/^DIP-([\w-]+)\.([\w-]+)$/.exec((key||'').trim());if(!m)return null;
@@ -259,16 +264,19 @@ if(!codeOK(id)){const a=crypto.getRandomValues(new Uint8Array(12));let t=[...a].
 try{localStorage.setItem('dip_id',id)}catch(e){}idbSet(id);return MYID=id}
 let LIC=null;
 async function licInit(){LIC=C.lic?await licCheck(C.lic):null;if(LIC&&(LIC.expired||LIC.other))LIC=null;await myId();
+if(LIC&&LIC_SERVER){const r=await srv(C.lic);if(r.status=='ok')lokSet();
+else if(r.status=='net'){if(Date.now()-lokGet()>LIC_GRACE*864e5){LIC=null;LICMSG='Connexion Internet nécessaire : la licence doit être vérifiée au moins une fois tous les '+LIC_GRACE+' jours.'}}
+else{LIC=null;LICMSG=r.msg||'Licence refusée par le serveur.'}}
 let n=licGet();try{if(!sessionStorage.getItem('dip_s')){n++;licSet(n);sessionStorage.setItem('dip_s',1)}}catch(e){n++}
-licBar(n);if(!LIC&&n>LIC_MAX)licWall()}
+licBar(n);if(LICMSG||(!LIC&&n>LIC_MAX))licWall()}
 function licBar(n){let b=document.getElementById('licbar');if(!b){b=document.createElement('div');b.id='licbar';b.className='np';document.querySelector('nav').after(b)}
 if(LIC){b.innerHTML='';b.style.display='none';return}const r=Math.max(0,LIC_MAX-n);
 b.style.cssText='padding:7px 16px;font-size:13px;background:'+(r<=5?'#fbeccc':'#eef4f0')+';border-bottom:1px solid var(--line)';
 b.innerHTML=`Version d'essai gratuite : ouverture ${Math.min(n,LIC_MAX)}/${LIC_MAX}${r<=5?` · <b>plus que ${r}</b>`:''}. <a href="#" onclick="licWall(1);return false">Activer une licence</a>`}
 function licWall(closable){let w=document.getElementById('licw');if(w)w.remove();w=document.createElement('div');w.id='licw';w.className='np';
 w.style.cssText='position:fixed;inset:0;background:#1d2421e6;z-index:50;display:grid;place-items:center;padding:16px';
-w.innerHTML=`<div class="card" style="max-width:520px;width:100%"><h2>${closable?'Activer une licence':'Fin de la période d\'essai'}</h2>
-<p>${closable?'':`Les ${LIC_MAX} ouvertures gratuites sont utilisées. `}Pour continuer à utiliser l'outil, saisis la clé de licence de ta structure.</p>
+w.innerHTML=`<div class="card" style="max-width:520px;width:100%"><h2>${closable?'Activer une licence':LICMSG?'Licence à vérifier':'Fin de la période d\'essai'}</h2>
+${LICMSG?`<p class="msg" style="background:#f6d9d5;padding:10px;border-radius:8px">${esc(LICMSG)}</p>`:''}<p>${closable||LICMSG?'':`Les ${LIC_MAX} ouvertures gratuites sont utilisées. `}Pour continuer à utiliser l'outil, saisis la clé de licence de ta structure.</p>
 <p style="background:var(--acc2);border-radius:10px;padding:10px">Code d'installation de ce poste, à nous transmettre :<br><b id="myid" style="font:700 20px ui-monospace,monospace;letter-spacing:1px">${esc(MYID||'…')}</b> <button onclick="navigator.clipboard&&navigator.clipboard.writeText(MYID);this.textContent='Copié'">Copier</button><br><a href="mailto:${LIC_CONTACT}?subject=${encodeURIComponent('Demande de licence Diagnostic Insertion Pro')}&body=${encodeURIComponent('Structure : '+(C.nom||'')+'\nCode d\'installation : '+MYID)}">Envoyer la demande par courriel</a></p><label>Clé de licence</label><textarea id="lickey" rows="3" placeholder="DIP-…"></textarea><p id="licmsg" class="mute"></p>
 <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="p" onclick="licActivate()">Activer</button>${closable?'<button onclick="document.getElementById(\'licw\').remove()">Fermer</button>':'<button onclick="exportJSON()">Récupérer le dossier en cours (.json)</button>'}</div>
 <p class="mute" style="margin-top:12px">Obtenir une licence : <a href="mailto:${LIC_CONTACT}">${LIC_CONTACT}</a></p></div>`;document.body.appendChild(w)}
@@ -277,7 +285,10 @@ if(!window.crypto||!crypto.subtle){m.textContent='Ce navigateur ne permet pas de
 if(!p){m.textContent='Clé invalide. Vérifie qu\'elle a été copiée en entier.';m.style.color='var(--f)';return}
 if(p.other){m.textContent='Cette clé a été créée pour un autre poste (code '+p.i+'). Demande une clé pour le code affiché ci-dessus.';m.style.color='var(--f)';return}
 if(p.expired){m.textContent='Cette licence a expiré le '+p.e+'.';m.style.color='var(--f)';return}
-C.lic=k.trim();saveCfg();LIC=p;document.getElementById('licw').remove();licBar(0);if(document.getElementById('s-cfg').classList.contains('on'))cfgEdit();alert('Licence activée pour « '+p.n+' »'+(p.e?' jusqu\'au '+p.e:'')+'.')}
+if(LIC_SERVER){m.textContent='Vérification auprès du serveur…';m.style.color='';const r=await srv(k.trim());
+if(r.status=='net'){m.textContent='Connexion Internet nécessaire pour activer la licence.';m.style.color='var(--f)';return}
+if(r.status!='ok'){m.textContent=r.msg||'Licence refusée.';m.style.color='var(--f)';return}lokSet()}
+LICMSG='';C.lic=k.trim();saveCfg();LIC=p;document.getElementById('licw').remove();licBar(0);if(document.getElementById('s-cfg').classList.contains('on'))cfgEdit();alert('Licence activée pour « '+p.n+' »'+(p.e?' jusqu\'au '+p.e:'')+'.')}
 function licInfo(){return LIC?`<div class="card"><h2>Licence</h2><p>Licence active : <b>${esc(LIC.n)}</b>${LIC.i?' · liée à ce poste ('+esc(LIC.i)+')':' · licence structure (tous postes)'}${LIC.e?' · valable jusqu\'au '+esc(LIC.e):' · sans limite de durée'}. Elle est incluse dans l'outil personnalisé et dans l'export de configuration.</p></div>`:`<div class="card"><h2>Licence</h2><p>Version d'essai. Code d'installation : <b style="font-family:ui-monospace,monospace">${esc(MYID||'')}</b> <button onclick="licWall(1)">Activer une licence</button></p></div>`}
 applyCfg();licInit();
 if(location.protocol.startsWith('http')&&'serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
